@@ -9,6 +9,14 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "kafka.topics")
 public class KafkaTopicsProperties {
 
+    /**
+     * Topic para ejecutar misiones
+     */
     private String execute = "umas.mission.execute";
+
+    /**
+     * Topic para notificaciones de preparación de dron (SMTP)
+     */
+    private String notification = "umas.dron.preparation.notification";
 
 }

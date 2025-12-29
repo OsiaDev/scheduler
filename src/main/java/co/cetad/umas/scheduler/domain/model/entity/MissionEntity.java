@@ -21,6 +21,9 @@ import java.util.UUID;
  * - estimatedDate: Fecha estimada de ejecución (NOT NULL)
  * - startDate: Fecha real de inicio (NULLABLE)
  * - endDate: Fecha real de finalización (NULLABLE)
+ *
+ * EJECUCIÓN AUTOMÁTICA:
+ * - isAutomatic: Indica si la misión debe ejecutarse automáticamente
  */
 @Getter
 @Setter
@@ -68,6 +71,13 @@ public class MissionEntity implements Serializable, Persistable<UUID> {
      */
     @Column(name = "end_date")
     private LocalDateTime endDate;
+
+    /**
+     * Indica si la misión debe ejecutarse automáticamente
+     * cuando llegue la fecha estimada
+     */
+    @Column(name = "is_automatic", nullable = false)
+    private Boolean isAutomatic = false;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
