@@ -1,6 +1,6 @@
 plugins {
 	id 'java'
-	id 'org.springframework.boot' version '4.0.1'
+	id 'org.springframework.boot' version '3.5.6'
 	id 'io.spring.dependency-management' version '1.1.7'
 }
 
@@ -26,11 +26,12 @@ repositories {
 
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation 'org.springframework.boot:spring-boot-starter-webflux'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-	implementation 'org.springframework.boot:spring-boot-starter-kafka'
-	implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8'
+	implementation 'org.springframework.kafka:spring-kafka'
 	implementation 'net.javacrumbs.shedlock:shedlock-spring:5.10.2'
 	implementation 'net.javacrumbs.shedlock:shedlock-provider-jdbc-template:5.10.2'
+	implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8'
 	compileOnly 'org.projectlombok:lombok'
 	runtimeOnly 'org.postgresql:postgresql'
 	annotationProcessor 'org.projectlombok:lombok'

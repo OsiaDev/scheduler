@@ -5,10 +5,11 @@ import co.cetad.umas.scheduler.domain.model.dto.DronPreparationNotificationEvent
 import co.cetad.umas.scheduler.domain.model.dto.MissionExecutionScheduledEvent;
 import co.cetad.umas.scheduler.domain.model.vo.Mission;
 import co.cetad.umas.scheduler.domain.ports.in.MissionSchedulerUseCase;
-import co.cetad.umas.scheduler.domain.ports.out.MissionEventPublisher;
+import co.cetad.umas.scheduler.domain.ports.out.EventPublisher;
 import co.cetad.umas.scheduler.domain.ports.out.MissionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -28,7 +29,11 @@ import java.util.concurrent.CompletableFuture;
  * - Asíncrono con CompletableFuture
  * - Programación funcional
  * - Sin efectos secundarios directos
- * - Delega la publicación de eventos al puerto
+ * - Delega la publicación de eventos a los publishers
+ *
+ * REFACTORIZACIÓN:
+ * - Usa EventPublisher<T> genérico para ambos tipos de eventos
+ * - Se inyectan dos publishers específicos por @Qualifier
  */
 @Slf4j
 @Service
@@ -36,7 +41,10 @@ import java.util.concurrent.CompletableFuture;
 public class MissionSchedulerService implements MissionSchedulerUseCase {
 
     private final MissionRepository missionRepository;
-    private final MissionEventPublisher eventPublisher;
+
+    private final EventPublisher<MissionExecutionScheduledEvent> missionExecutionPublisher;
+
+    private final EventPublisher<DronPreparationNotificationEvent> dronPreparationPublisher;
 
     @Value("${scheduler.preparation-notification-minutes:30}")
     private Integer preparationNotificationMinutes;
@@ -90,14 +98,14 @@ public class MissionSchedulerService implements MissionSchedulerUseCase {
     }
 
     /**
-     * Publica eventos de ejecución para cada misión
+     * Publica eventos de ejecución para cada misión usando EventPublisher<MissionExecutionScheduledEvent>
      */
     private CompletableFuture<List<Void>> publishExecutionEvents(List<Mission> missions) {
         log.debug("Publishing execution events for {} missions", missions.size());
 
         List<CompletableFuture<Void>> publications = missions.stream()
                 .map(this::createExecutionEvent)
-                .map(eventPublisher::publishMissionExecution)
+                .map(missionExecutionPublisher::publish)
                 .toList();
 
         return CompletableFuture.allOf(publications.toArray(new CompletableFuture[0]))
@@ -107,14 +115,14 @@ public class MissionSchedulerService implements MissionSchedulerUseCase {
     }
 
     /**
-     * Publica eventos de preparación de dron
+     * Publica eventos de preparación de dron usando EventPublisher<DronPreparationNotificationEvent>
      */
     private CompletableFuture<List<Void>> publishPreparationNotifications(List<Mission> missions) {
         log.debug("Publishing preparation notifications for {} missions", missions.size());
 
         List<CompletableFuture<Void>> publications = missions.stream()
                 .map(this::createPreparationEvent)
-                .map(eventPublisher::publishDronPreparationNotification)
+                .map(dronPreparationPublisher::publish)
                 .toList();
 
         return CompletableFuture.allOf(publications.toArray(new CompletableFuture[0]))
@@ -129,7 +137,7 @@ public class MissionSchedulerService implements MissionSchedulerUseCase {
     private MissionExecutionScheduledEvent createExecutionEvent(Mission mission) {
         return MissionExecutionScheduledEvent.of(
                 mission.id(),
-                mission.name(),
+                "Mission Scheduler",
                 mission.estimatedDate()
         );
     }
@@ -140,7 +148,7 @@ public class MissionSchedulerService implements MissionSchedulerUseCase {
     private DronPreparationNotificationEvent createPreparationEvent(Mission mission) {
         return DronPreparationNotificationEvent.of(
                 mission.id(),
-                mission.name(),
+                "Mission Scheduler",
                 mission.estimatedDate(),
                 preparationNotificationMinutes
         );

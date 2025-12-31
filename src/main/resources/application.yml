@@ -32,6 +32,19 @@ spring:
 kafka:
   topics:
     execute: umas.mission.execute
+    notification: umas.dron.preparation.notification
+
+# ===== SCHEDULER CONFIGURATION =====
+scheduler:
+  # Minutos antes de la ejecución para enviar notificación de preparación
+  preparation-notification-minutes: ${PREPARATION_NOTIFICATION_MINUTES:30}
+
+  # Cron expression para verificar misiones listas (cada minuto)
+  # Format: second minute hour day month weekday
+  mission-execution-cron: ${MISSION_EXECUTION_CRON:0 * * * * *}
+
+  # Cron expression para notificaciones de preparación (cada 5 minutos)
+  preparation-notification-cron: ${PREPARATION_NOTIFICATION_CRON:0 */5 * * * *}
 
 # ===== MANAGEMENT / ACTUATOR =====
 management:

@@ -37,7 +37,7 @@ public class MissionEventPublisher implements EventPublisher<MissionExecutionSch
 
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final KafkaTopicsProperties topicsProperties;
-    private final ObjectMapper objectMapper = createObjectMapper();
+    private final ObjectMapper objectMapper;
 
     @Override
     @Async
@@ -95,16 +95,6 @@ public class MissionEventPublisher implements EventPublisher<MissionExecutionSch
      */
     private String serializeMessage(Object message) throws JsonProcessingException {
         return objectMapper.writeValueAsString(message);
-    }
-
-    /**
-     * Crea ObjectMapper configurado para LocalDateTime
-     */
-    private static ObjectMapper createObjectMapper() {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule());
-        mapper.registerModule(new Jdk8Module());
-        return mapper;
     }
 
 }
