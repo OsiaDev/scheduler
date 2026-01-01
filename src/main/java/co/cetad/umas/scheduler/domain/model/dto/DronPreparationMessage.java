@@ -8,7 +8,17 @@ import java.time.LocalDateTime;
  * DTO para mensaje de preparación de dron en Kafka
  * Este mensaje será consumido por el servicio de notificaciones SMTP
  *
- * REFACTORIZACIÓN: Ahora incluye vehicleId, vehicleName y recipientEmail
+ * ESTRUCTURA FINAL DEL MENSAJE:
+ * {
+ *   "mission_id": "...",
+ *   "mission_name": "...",
+ *   "vehicleId": "DRN-001",
+ *   "vehicleName": "Test Drone Alpha",
+ *   "scheduled_execution_time": "2026-01-01T10:30:00",
+ *   "minutes_before_execution": 30,
+ *   "published_at": "2026-01-01T10:00:00",
+ *   "recipient_email": "cristian920624@gmail.com"
+ * }
  */
 public record DronPreparationMessage(
         @JsonProperty("mission_id") String missionId,

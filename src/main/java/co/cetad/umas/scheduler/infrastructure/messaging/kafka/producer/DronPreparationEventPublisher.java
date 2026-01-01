@@ -20,20 +20,15 @@ import java.util.concurrent.CompletableFuture;
  * IMPLEMENTA: EventPublisher<DronPreparationNotificationEvent>
  *
  * RESPONSABILIDADES:
- * 1. Publicar eventos de notificación de preparación en topic de notificaciones
- * 2. Transformar eventos de dominio a mensajes DTO
- * 3. Serializar mensajes a JSON
- * 4. Manejo de errores de publicación
+ * 1. Transformar eventos de dominio a mensajes DTO para Kafka
+ * 2. Serializar mensajes a JSON
+ * 3. Publicar en el topic umas.dron.preparation.notification
+ * 4. Manejo de errores de serialización y publicación
  *
- * CARACTERÍSTICAS:
- * - Operaciones asíncronas con @Async
- * - Serialización JSON con Jackson
- * - Logging detallado de eventos
- * - Manejo funcional de errores con CompletableFuture
- *
- * REFACTORIZACIÓN:
- * - Ahora incluye vehicleId, vehicleName y recipientEmail en el mensaje
- * - Sigue el mismo patrón que MissionEventPublisher
+ * IMPORTANTE:
+ * - Usa @Qualifier("dronPreparationEventPublisher") para inyección
+ * - Espera acknowledgment de Kafka con .get()
+ * - Logging detallado para debugging
  */
 @Slf4j
 @Component("dronPreparationEventPublisher")
@@ -49,9 +44,13 @@ public class DronPreparationEventPublisher implements EventPublisher<DronPrepara
     public CompletableFuture<Void> publish(DronPreparationNotificationEvent event) {
         return CompletableFuture.runAsync(() -> {
             try {
+                // Transformar evento a mensaje DTO
                 DronPreparationMessage message = toPreparationMessage(event);
+
+                // Serializar a JSON
                 String jsonPayload = serializeMessage(message);
 
+                // Publicar en Kafka
                 kafkaTemplate.send(
                         topicsProperties.getNotification(),
                         event.missionId(),
@@ -81,7 +80,7 @@ public class DronPreparationEventPublisher implements EventPublisher<DronPrepara
     }
 
     /**
-     * Transforma evento de dominio a mensaje DTO para preparación
+     * Transforma evento de dominio a mensaje DTO para Kafka
      * Incluye todos los campos necesarios: vehicleId, vehicleName, recipientEmail
      */
     private DronPreparationMessage toPreparationMessage(DronPreparationNotificationEvent event) {

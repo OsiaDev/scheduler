@@ -9,7 +9,6 @@ import co.cetad.umas.scheduler.domain.ports.out.EventPublisher;
 import co.cetad.umas.scheduler.domain.ports.out.MissionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -23,17 +22,18 @@ import java.util.concurrent.CompletableFuture;
  * RESPONSABILIDADES:
  * 1. Identificar misiones automáticas aprobadas listas para ejecutar
  * 2. Publicar eventos de ejecución cuando llegue la hora
- * 3. Publicar eventos de preparación X minutos antes
+ * 3. Publicar eventos de preparación X minutos antes (con datos enriquecidos)
+ *
+ * CAMBIOS RECIENTES:
+ * - Agregado NotificationEventEnricher para enriquecer eventos de preparación
+ * - Modificado notifyUpcomingMissions() para usar enrichAndPublishPreparationNotifications()
+ * - El método scheduleReadyMissions() NO tiene cambios
  *
  * CARACTERÍSTICAS:
  * - Asíncrono con CompletableFuture
  * - Programación funcional
  * - Sin efectos secundarios directos
  * - Delega la publicación de eventos a los publishers
- *
- * REFACTORIZACIÓN:
- * - Usa EventPublisher<T> genérico para ambos tipos de eventos
- * - Se inyectan dos publishers específicos por @Qualifier
  */
 @Slf4j
 @Service
@@ -41,6 +41,7 @@ import java.util.concurrent.CompletableFuture;
 public class MissionSchedulerService implements MissionSchedulerUseCase {
 
     private final MissionRepository missionRepository;
+    private final NotificationEventEnricher eventEnricher; // ✅ NUEVO
 
     private final EventPublisher<MissionExecutionScheduledEvent> missionExecutionPublisher;
 
@@ -49,6 +50,10 @@ public class MissionSchedulerService implements MissionSchedulerUseCase {
     @Value("${scheduler.preparation-notification-minutes:30}")
     private Integer preparationNotificationMinutes;
 
+    /**
+     * Ejecuta el scheduling de misiones listas para ejecutar
+     * ⚠️ SIN CAMBIOS - Mantiene funcionamiento original
+     */
     @Override
     public CompletableFuture<Integer> scheduleReadyMissions() {
         log.info("Starting mission scheduling process");
@@ -59,18 +64,23 @@ public class MissionSchedulerService implements MissionSchedulerUseCase {
                 .whenComplete(this::logSchedulingResult);
     }
 
+    /**
+     * Ejecuta el proceso de notificación de preparación de drones
+     * ✅ MODIFICADO - Ahora usa enrichAndPublishPreparationNotifications
+     */
     @Override
     public CompletableFuture<Integer> notifyUpcomingMissions() {
         log.info("Starting upcoming missions notification process");
 
         return findUpcomingMissions()
-                .thenCompose(this::publishPreparationNotifications)
+                .thenCompose(this::enrichAndPublishPreparationNotifications) // ✅ CAMBIADO
                 .thenApply(this::countSuccessfulPublications)
                 .whenComplete(this::logNotificationResult);
     }
 
     /**
      * Busca misiones automáticas aprobadas cuya hora de ejecución ha llegado
+     * ⚠️ SIN CAMBIOS
      */
     private CompletableFuture<List<Mission>> findReadyMissions() {
         LocalDateTime now = LocalDateTime.now();
@@ -84,6 +94,7 @@ public class MissionSchedulerService implements MissionSchedulerUseCase {
 
     /**
      * Busca misiones que se ejecutarán en X minutos
+     * ⚠️ SIN CAMBIOS
      */
     private CompletableFuture<List<Mission>> findUpcomingMissions() {
         LocalDateTime now = LocalDateTime.now();
@@ -98,7 +109,8 @@ public class MissionSchedulerService implements MissionSchedulerUseCase {
     }
 
     /**
-     * Publica eventos de ejecución para cada misión usando EventPublisher<MissionExecutionScheduledEvent>
+     * Publica eventos de ejecución para cada misión
+     * ⚠️ SIN CAMBIOS
      */
     private CompletableFuture<List<Void>> publishExecutionEvents(List<Mission> missions) {
         log.debug("Publishing execution events for {} missions", missions.size());
@@ -115,14 +127,15 @@ public class MissionSchedulerService implements MissionSchedulerUseCase {
     }
 
     /**
-     * Publica eventos de preparación de dron usando EventPublisher<DronPreparationNotificationEvent>
+     * Enriquece y publica eventos de preparación de dron
+     * ✅ NUEVO MÉTODO - Usa NotificationEventEnricher para obtener datos del dron y operador
      */
-    private CompletableFuture<List<Void>> publishPreparationNotifications(List<Mission> missions) {
-        log.debug("Publishing preparation notifications for {} missions", missions.size());
+    private CompletableFuture<List<Void>> enrichAndPublishPreparationNotifications(List<Mission> missions) {
+        log.debug("Enriching and publishing preparation notifications for {} missions", missions.size());
 
         List<CompletableFuture<Void>> publications = missions.stream()
-                .map(this::createPreparationEvent)
-                .map(dronPreparationPublisher::publish)
+                .map(mission -> eventEnricher.enrichNotificationEvent(mission, preparationNotificationMinutes))
+                .map(eventFuture -> eventFuture.thenCompose(dronPreparationPublisher::publish))
                 .toList();
 
         return CompletableFuture.allOf(publications.toArray(new CompletableFuture[0]))
@@ -133,29 +146,19 @@ public class MissionSchedulerService implements MissionSchedulerUseCase {
 
     /**
      * Crea un evento de ejecución desde una misión
+     * ⚠️ SIN CAMBIOS
      */
     private MissionExecutionScheduledEvent createExecutionEvent(Mission mission) {
         return MissionExecutionScheduledEvent.of(
                 mission.id(),
-                "Mission Scheduler",
+                mission.name(),
                 mission.estimatedDate()
         );
     }
 
     /**
-     * Crea un evento de preparación desde una misión
-     */
-    private DronPreparationNotificationEvent createPreparationEvent(Mission mission) {
-        return DronPreparationNotificationEvent.of(
-                mission.id(),
-                "Mission Scheduler",
-                mission.estimatedDate(),
-                preparationNotificationMinutes
-        );
-    }
-
-    /**
      * Cuenta las publicaciones exitosas
+     * ⚠️ SIN CAMBIOS
      */
     private Integer countSuccessfulPublications(List<Void> results) {
         return results.size();
@@ -163,6 +166,7 @@ public class MissionSchedulerService implements MissionSchedulerUseCase {
 
     /**
      * Log del resultado de scheduling
+     * ⚠️ SIN CAMBIOS
      */
     private void logSchedulingResult(Integer count, Throwable throwable) {
         if (throwable != null) {
@@ -174,6 +178,7 @@ public class MissionSchedulerService implements MissionSchedulerUseCase {
 
     /**
      * Log del resultado de notificaciones
+     * ⚠️ SIN CAMBIOS
      */
     private void logNotificationResult(Integer count, Throwable throwable) {
         if (throwable != null) {

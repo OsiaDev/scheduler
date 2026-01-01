@@ -6,7 +6,10 @@ import java.time.LocalDateTime;
  * Evento de dominio para notificar la preparación de dron vía SMTP
  * Este evento se publica X minutos antes de la ejecución de la misión
  *
- * REFACTORIZACIÓN: Ahora incluye información completa del dron y operador
+ * NUEVOS CAMPOS:
+ * - vehicleId: ID del dron asignado a la misión
+ * - vehicleName: Nombre del dron asignado
+ * - recipientEmail: Email del operador responsable
  */
 public record DronPreparationNotificationEvent(
         String missionId,
@@ -18,6 +21,7 @@ public record DronPreparationNotificationEvent(
         LocalDateTime publishedAt,
         String recipientEmail
 ) {
+
     public DronPreparationNotificationEvent {
         if (missionId == null || missionId.isBlank()) {
             throw new IllegalArgumentException("Mission ID cannot be null or empty");

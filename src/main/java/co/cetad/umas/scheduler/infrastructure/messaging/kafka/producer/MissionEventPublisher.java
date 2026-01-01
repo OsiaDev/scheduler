@@ -8,7 +8,6 @@ import co.cetad.umas.scheduler.domain.ports.out.EventPublisher;
 import co.cetad.umas.scheduler.infrastructure.messaging.kafka.config.KafkaTopicsProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -31,7 +30,7 @@ import java.util.concurrent.CompletableFuture;
  * - Manejo funcional de errores
  */
 @Slf4j
-@Component
+@Component("missionExecutionEventPublisher")
 @RequiredArgsConstructor
 public class MissionEventPublisher implements EventPublisher<MissionExecutionScheduledEvent> {
 
@@ -73,19 +72,6 @@ public class MissionEventPublisher implements EventPublisher<MissionExecutionSch
                 event.missionId(),
                 event.missionName(),
                 event.scheduledAt(),
-                event.publishedAt()
-        );
-    }
-
-    /**
-     * Transforma evento de dominio a mensaje DTO
-     */
-    private DronPreparationMessage toPreparationMessage(DronPreparationNotificationEvent event) {
-        return DronPreparationMessage.of(
-                event.missionId(),
-                event.missionName(),
-                event.scheduledExecutionTime(),
-                event.minutesBeforeExecution(),
                 event.publishedAt()
         );
     }
