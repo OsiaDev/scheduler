@@ -6,7 +6,6 @@ import co.cetad.umas.scheduler.domain.model.dto.DronPreparationMessage;
 import co.cetad.umas.scheduler.infrastructure.messaging.kafka.config.KafkaTopicsProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -32,7 +31,9 @@ import java.util.concurrent.CompletableFuture;
  * - Logging detallado de eventos
  * - Manejo funcional de errores con CompletableFuture
  *
- * NOTA: Sigue el mismo patrón que MissionEventPublisher para MissionExecutionScheduledEvent
+ * REFACTORIZACIÓN:
+ * - Ahora incluye vehicleId, vehicleName y recipientEmail en el mensaje
+ * - Sigue el mismo patrón que MissionEventPublisher
  */
 @Slf4j
 @Component("dronPreparationEventPublisher")
@@ -57,11 +58,14 @@ public class DronPreparationEventPublisher implements EventPublisher<DronPrepara
                         jsonPayload
                 ).get(); // Wait for acknowledgment
 
-                log.info("✅ Published dron preparation notification - Mission ID: {}, " +
-                                "Scheduled: {}, Minutes before: {}, Topic: {}",
+                log.info("✅ Published dron preparation notification - Mission: {}, Vehicle: {} ({}), " +
+                                "Scheduled: {}, Minutes before: {}, Recipient: {}, Topic: {}",
                         event.missionId(),
+                        event.vehicleName(),
+                        event.vehicleId(),
                         event.scheduledExecutionTime(),
                         event.minutesBeforeExecution(),
+                        event.recipientEmail(),
                         topicsProperties.getNotification());
 
             } catch (JsonProcessingException e) {
@@ -78,14 +82,18 @@ public class DronPreparationEventPublisher implements EventPublisher<DronPrepara
 
     /**
      * Transforma evento de dominio a mensaje DTO para preparación
+     * Incluye todos los campos necesarios: vehicleId, vehicleName, recipientEmail
      */
     private DronPreparationMessage toPreparationMessage(DronPreparationNotificationEvent event) {
         return DronPreparationMessage.of(
                 event.missionId(),
                 event.missionName(),
+                event.vehicleId(),
+                event.vehicleName(),
                 event.scheduledExecutionTime(),
                 event.minutesBeforeExecution(),
-                event.publishedAt()
+                event.publishedAt(),
+                event.recipientEmail()
         );
     }
 
